@@ -13,7 +13,7 @@ This project provides resources operations based on Azure SDK.
 1.  Include Azure SDK
 ``` bash
     cd addons/
-    git clone https://gitlab.ucloudworld.net/popfeng/azure_sdk.git
+    git clone https://github.com/popfeng/azure_resource_service.git
 ```
 
 2.  Start the deamon script
