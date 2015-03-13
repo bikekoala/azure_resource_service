@@ -70,7 +70,7 @@ class AzureService
 
             switch ($result['Status']) {
                 case self::STATUS_IN_PROGRESS :
-                    sleep(2);
+                    sleep(5);
                     continue;
                 case self::STATUS_FAILED :
                     throw new \Exception($result['Error']['Message']);

@@ -17,13 +17,16 @@ class Callback extends CallbackService
      */
     public function run()
     {
-        $vmRes = $this->getAzureResourceForVm();
         $params = $this->getCommonParams();
-        foreach ($this->items as $i => $item) {
-            $vm = $vmRes[$item['data']['cloud_service_name']][$item['data']['host_name']];
-            $params[$i]['host_status'] = $vm['host_status'];
-            $params[$i]['power_state'] = $vm['power_state'];
+        $vmRes = $this->getAzureResourceForVm();
+        if ( ! empty($vmRes)) {
+            foreach ($this->items as $i => $item) {
+                $vm = $vmRes[$item['data']['cloud_service_name']][$item['data']['host_name']];
+                $params[$i]['host_status'] = $vm['host_status'];
+                $params[$i]['power_state'] = $vm['power_state'];
+            }
         }
+        
         return $params;
     }
 }

@@ -75,9 +75,22 @@ class CreateVirtualNetwork extends Base
     private function checkIfNameExists()
     {
         $result = $this->serviceManagement->listVirtualNetworkSites();
-        foreach ($result->VirtualNetworkSite as $site) {
+        $vns = isset($result->VirtualNetworkSite->Name) ?
+            array($result->VirtualNetworkSite) :
+            $result->VirtualNetworkSite;
+
+        foreach ($vns as $site) {
             if ($this->extData['custom']['name'] == $site->Name) {
-                return true;
+                $subnets = isset($site->Subnets->Subnet->Name) ?
+                    array($site->Subnets->Subnet) :
+                    $site->Subnets->Subnet;
+                foreach ($subnets as $subnet) {
+                    foreach ($this->extData['custom']['subnet'] as $sv) {
+                        if ($sv['name'] == $subnet->Name) {
+                            return true;
+                        }
+                    }
+                }
             }
         }
         return false;

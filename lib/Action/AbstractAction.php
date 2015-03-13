@@ -49,14 +49,6 @@ abstract class AbstractAction
     abstract public function checkCustomParams();
 
     /**
-     * 开火！
-     *
-     * @return void
-     * @throws Exception
-     */
-    abstract public function fire();
-
-    /**
      * 奔跑吧，兄弟！
      *
      * @return void
@@ -66,9 +58,14 @@ abstract class AbstractAction
         try {
             $this->checkHeader();
             $this->checkCommonParams();
-            $this->fire();
+            $this->checkCustomParams();
+
+            $opId = $this->initAsyncOperation();
+            static::outputJson(true, 'Accepd', $opId);
         } catch (\Exception $e) {
-            static::outputJson(false, $e->getMessage());
+            $message = $e->getMessage();
+            $opId = $this->saveFailedOperation($message);
+            static::outputJson(false, $message, $opId);
         }
     }
 
@@ -116,8 +113,7 @@ abstract class AbstractAction
      */
     public function initAsyncOperation()
     {
-        $curClass = get_called_class();
-        $serviceName = substr($curClass, strrpos($curClass, '\\') + 1);
+        $serviceName = $this->getCurApiName();
         $baseServiceClass = '\\Service\\' . $serviceName . '\\Base';
 
         try {
@@ -128,7 +124,9 @@ abstract class AbstractAction
                 $this->subId,
                 $this->callbackUrl,
                 $serviceName,
-                serialize($this->resources)
+                serialize($this->resources),
+                ResOp::CB_STATUS_DEFAULT,
+                ResOp::STATUS_ACCEPT
             );
             foreach ($this->resources as $data) {
                 ResItem::single()->addData(
@@ -146,6 +144,41 @@ abstract class AbstractAction
         }
 
         return $opId;
+    }
+
+    /**
+     * 保存失败的操作
+     *
+     * @param string $message
+     * @return int
+     */
+    public function saveFailedOperation($message)
+    {
+        try {
+            $opId = ResOp::single()->addData(
+                $this->subId,
+                $this->callbackUrl,
+                $this->getCurApiName(),
+                serialize($this->resources),
+                ResOp::CB_STATUS_DEFAULT,
+                ResOp::STATUS_FAIL,
+                $message
+            );
+        } catch (\Exception $e) {
+        }
+
+        return $opId;
+    }
+
+    /**
+     * 获取当前API的名称
+     *
+     * @return string
+     */
+    private function getCurApiName()
+    {
+        $curClass = get_called_class();
+        return substr($curClass, strrpos($curClass, '\\') + 1);
     }
 
     /**

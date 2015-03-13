@@ -58,7 +58,7 @@ function rand_code($length = 5, $type = 0) {
         1 => '0123456789',
         2 => 'abcdefghijklmnopqrstuvwxyz',
         3 => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        4 => '~@#$%^&*(){}[]|',
+        4 => ',.<>{}~!@#$%^&*_',
     );
     if ($type == 0) {
         array_pop($arr);

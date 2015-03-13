@@ -17,17 +17,20 @@ class Callback extends CallbackService
      */
     public function run()
     {
-        $vmRes = $this->getAzureResourceForVm();
         $params = $this->getCommonParams();
-        foreach ($this->items as $i => $item) {
-            $d = $item['data'];
-            $params[$i]['data'] = $vmRes[$d['cloud_service_name']][$d['host_name']];
-            $params[$i]['data']['size_id'] = $d['size_id'];
-            $params[$i]['data']['image_id'] = $d['image_id'];
-            $params[$i]['data']['location'] = $d['location'];
-            $params[$i]['data']['user_name'] = $d['user_name'];
-            $params[$i]['data']['user_password'] = $d['user_password'];
+        $vmRes = $this->getAzureResourceForVm();
+        if ( ! empty($vmRes)) {
+            foreach ($this->items as $i => $item) {
+                $d = $item['data'];
+                $params[$i]['data'] = $vmRes[$d['cloud_service_name']][$d['host_name']];
+                $params[$i]['data']['size_id'] = $d['size_id'];
+                $params[$i]['data']['image_id'] = $d['image_id'];
+                $params[$i]['data']['location'] = $d['location'];
+                $params[$i]['data']['user_name'] = $d['user_name'];
+                $params[$i]['data']['user_password'] = $d['user_password'];
+            }
         }
+
         return $params;
     }
 }

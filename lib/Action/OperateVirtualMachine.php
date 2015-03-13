@@ -11,20 +11,6 @@ use Rule\Forge as RuleForge;
 class OperateVirtualMachine extends AbstractAction
 {
     /**
-     * 开火！
-     *
-     * @return void
-     * @throws Exception
-     */
-    public function fire()
-    {
-        $this->checkCustomParams();
-        $opId = $this->initAsyncOperation();
-
-        static::outputJson(true, 'Accepd', $opId);
-    }
-
-    /**
      * 检查自定义参数是否合法
      *
      * @return void

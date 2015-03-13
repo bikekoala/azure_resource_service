@@ -5,7 +5,6 @@ namespace Model;
  * Azure资源条目存储账户模型
  *
  * todo:
- *  创建虚拟机时需要递增disk_count
  *  删除虚拟机时需要递减disk_count
  *
  * @author Xuewu Sun <sunxw@ucloudworld.com> 2015-01-26
@@ -30,16 +29,24 @@ class ResItemSa extends BaseModel
     const DISK_COUNT_LIMIT = 30;
 
     /**
+     * 是否已创建
+     */
+    const STATUS_CREATED  = 1;
+    const STATUS_CREATING = 0;
+
+    /**
      * 获取可用的存储账户数据
      *
+     * @param string $location
      * @param string $subId
      * @return array
      */
-    public function getAvailableData($subId)
+    public function getAvailableData($location, $subId)
     {
         $sql = sprintf(
-            'SELECT * FROM `%s` WHERE `sub_id`="%s"',
+            'SELECT * FROM `%s` WHERE `location`="%s" AND `sub_id`="%s"',
             $this->table,
+            $location,
             $subId
         );
         $sth = $this->pdo->prepare($sql);
@@ -47,15 +54,43 @@ class ResItemSa extends BaseModel
         $sth->execute();
         $result = $sth->fetchAll();
         if ($result) {
+            // 磁盘数校验
             foreach ($result as $i => $item) {
                 if (self::DISK_COUNT_LIMIT <= $item['disk_count']) {
                     unset($result[$i]);
                 }
             }
-            return (array) array_pop($result);
+
+            // 按是否创建成功排序
+            $volume = array();
+            foreach ($result as $key => $row) {
+                $volume[$key] = $row['is_created'];
+            }
+            array_multisort($volume, SORT_DESC, $result);
+
+            // 返回第一个结果
+            return (array) array_shift($result);
         } else {
             return array();
         }
+    }
+    
+    /**
+     * 通过ID获取创建状态
+     *
+     * @param int $id
+     * @return int
+     */
+    public function getCreateStatusById($id)
+    {
+        $sql = sprintf(
+            'SELECT `is_created` FROM `%s` WHERE `id`="%d"',
+            $this->table,
+            $id
+        );
+        $sth = $this->pdo->prepare($sql);
+        $sth->execute();
+        return (int) $sth->fetchColumn();
     }
 
     /**
@@ -84,6 +119,34 @@ class ResItemSa extends BaseModel
     }
 
     /**
+     * 更新数据
+     *
+     * @param int $id
+     * @param string $requestId
+     * @param int $isCreated
+     * @return mixed
+     */
+    public function updateDataById($id, $requestId, $isCreated)
+    {
+        // prepare
+        $sql = 'UPDATE `%s`
+                SET `request_id`=:request_id, `is_created`=:is_created
+                WHERE `id`=%d';
+        $sth = $this->pdo->prepare(sprintf($sql, $this->table, $id));
+
+        // bindvalue
+        $sth->bindValue(':request_id', $requestId, \PDO::PARAM_STR);
+        $sth->bindValue(':is_created', $isCreated, \PDO::PARAM_INT);
+
+        // execute
+        try {
+            return $sth->execute();
+        } catch (\PDOException $e) {
+            throw new \Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
      * 插入单条数据
      *
      * @param int $itemId
@@ -91,9 +154,10 @@ class ResItemSa extends BaseModel
      * @param string $name
      * @param string $label
      * @param string $location
-     * @param string $requestId
      * @param int $diskCount
-     * @return void
+     * @param string $requestId
+     * @param int $isCreated
+     * @return int
      * @throws Exception
      */
     public function addData(
@@ -102,8 +166,9 @@ class ResItemSa extends BaseModel
         $name,
         $label,
         $location,
+        $diskCount,
         $requestId,
-        $diskCount = 0
+        $isCreated
     ) {
         // prepare
         $sql = 'INSERT INTO `%s`(
@@ -114,6 +179,7 @@ class ResItemSa extends BaseModel
                     `location`,
                     `disk_count`,
                     `request_id`,
+                    `is_created`,
                     `create_time`
                 )
                 VALUES (
@@ -124,6 +190,7 @@ class ResItemSa extends BaseModel
                     :location,
                     :disk_count,
                     :request_id,
+                    :is_created,
                     :create_time
                 )';
         $sth = $this->pdo->prepare(sprintf($sql, $this->table));
@@ -136,11 +203,13 @@ class ResItemSa extends BaseModel
         $sth->bindValue(':location', $location, \PDO::PARAM_STR);
         $sth->bindValue(':disk_count', $diskCount, \PDO::PARAM_INT);
         $sth->bindValue(':request_id', $requestId, \PDO::PARAM_STR);
+        $sth->bindValue(':is_created', $isCreated, \PDO::PARAM_INT);
         $sth->bindValue(':create_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
 
         // execute
         try {
-            return $sth->execute();
+            $sth->execute();
+            return (int) $this->pdo->lastInsertId();
         } catch (\PDOException $e) {
             throw new \Exception($e->getMessage(), 500);
         }

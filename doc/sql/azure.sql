@@ -35,7 +35,7 @@ CREATE TABLE `azure_res_item` (
   PRIMARY KEY (`id`),
   KEY `op_id` (`op_id`) USING BTREE,
   KEY `status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=111 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -57,7 +57,7 @@ CREATE TABLE `azure_res_item_cs` (
   UNIQUE KEY `name` (`name`) USING BTREE,
   KEY `item_id` (`item_id`) USING BTREE,
   KEY `request_id` (`request_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目云服务表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目云服务表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -76,13 +76,15 @@ CREATE TABLE `azure_res_item_sa` (
   `location` varchar(50) NOT NULL COMMENT '地域',
   `disk_count` int(11) unsigned NOT NULL DEFAULT '0' COMMENT '账户内磁盘数',
   `request_id` char(32) NOT NULL COMMENT '请求ID',
+  `is_created` tinyint(1) unsigned NOT NULL COMMENT '是否已创建',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`),
   KEY `item_id` (`item_id`),
   KEY `sub_id` (`sub_id`),
-  KEY `request_id` (`request_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目存储账户表';
+  KEY `request_id` (`request_id`) USING BTREE,
+  KEY `location` (`location`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目存储账户表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -103,7 +105,7 @@ CREATE TABLE `azure_res_item_vmd` (
   `create_time` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   KEY `item_id` (`item_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部部署表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部部署表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -131,7 +133,7 @@ CREATE TABLE `azure_res_item_vmd_role` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `vmd_id_host_name` (`vmd_id`,`host_name`) USING BTREE,
   KEY `request_id` (`request_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部署角色表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部署角色表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -152,7 +154,7 @@ CREATE TABLE `azure_res_item_vmd_role_port` (
   PRIMARY KEY (`id`),
   KEY `name` (`name`),
   KEY `role_id` (`role_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部署角色端口表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部署角色端口表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -176,7 +178,7 @@ CREATE TABLE `azure_res_item_vn` (
   KEY `item_id` (`item_id`),
   KEY `location` (`location`),
   KEY `request_id` (`request_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟网络表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟网络表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -195,7 +197,7 @@ CREATE TABLE `azure_res_item_vn_subnet` (
   PRIMARY KEY (`id`),
   KEY `name` (`name`),
   KEY `vn_id` (`vn_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟网络子网表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟网络子网表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -212,13 +214,14 @@ CREATE TABLE `azure_res_op` (
   `api_name` varchar(50) NOT NULL COMMENT 'API名称',
   `api_data` text NOT NULL COMMENT 'API数据',
   `callback_status` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'callback状态',
-  `status` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '操作状态',
+  `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '操作状态',
+  `message` varchar(255) NOT NULL DEFAULT '' COMMENT '操作信息',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   KEY `id` (`id`),
   KEY `status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=91 DEFAULT CHARSET=utf8 COMMENT='Azure资源操作表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源操作表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -238,7 +241,7 @@ CREATE TABLE `azure_res_status` (
   `update_time` datetime NOT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `request_id` (`request_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1593 DEFAULT CHARSET=utf8 COMMENT='Azure资源异步操作状态表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源异步操作状态表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -250,14 +253,15 @@ DROP TABLE IF EXISTS `azure_vm_image`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `azure_vm_image` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `display_index` int(11) unsigned NOT NULL COMMENT '显示索引',
-  `display_name` varchar(100) NOT NULL COMMENT '镜像显示名称',
-  `source_name` varchar(100) NOT NULL COMMENT '镜像源名称',
-  `os_name` varchar(100) NOT NULL COMMENT '系统名称',
+  `display_index` int(11) unsigned NOT NULL COMMENT '镜像显示顺序索引',
+  `display_name` varchar(255) NOT NULL COMMENT '镜像显示名称',
+  `label` varchar(255) NOT NULL COMMENT '镜像标签（对应API的Label）',
+  `source_name` varchar(255) NOT NULL COMMENT '镜像源名称（对应API的Name）',
+  `os_name` varchar(50) NOT NULL COMMENT '系统名称（对应API的OS）',
   `is_disabled` tinyint(1) unsigned NOT NULL COMMENT '是否禁用',
   PRIMARY KEY (`id`),
   KEY `source_name` (`source_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8 COMMENT='Azure虚拟机镜像表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure虚拟机镜像表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -273,7 +277,27 @@ CREATE TABLE `azure_vm_size` (
   `core` int(10) unsigned NOT NULL COMMENT '内核数',
   `memory` decimal(11,2) unsigned NOT NULL COMMENT '内存数',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='Azure虚拟机尺寸表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure虚拟机尺寸表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `azure_subscription`
+--
+
+DROP TABLE IF EXISTS `azure_subscription`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `azure_subscription` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `guid` char(36) NOT NULL COMMENT '订阅GUID',
+  `name` varchar(36) NOT NULL COMMENT '订阅名称',
+  `cert` text NOT NULL COMMENT '管理证书私钥',
+  `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '状态 -1禁用0未分配1已使用',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `guid` (`guid`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure订阅表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -285,4 +309,4 @@ CREATE TABLE `azure_vm_size` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-08 18:20:58
+-- Dump completed on 2015-03-12 16:39:17

@@ -13,7 +13,7 @@ class Subscription extends BaseModel
      *
      * @var string
      */
-    protected $table = 'subscription';
+    protected $table = 'azure_subscription';
 
     /**
      * 实例对象

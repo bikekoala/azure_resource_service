@@ -305,7 +305,7 @@ class CreateVirtualMachine extends Base
      */
     private function initExtData()
     {
-        $saData = ResItemSa::single()->getAvailableData($this->subId);
+        $saData = ResItemSa::single()->getAvailableData($this->data['location'], $this->subId);
         $vnData = ResItemVn::single()->getDataByLocationAndSubId($this->data['location'], $this->subId);
         $csId = ResItemCs::single()->getIdByName($this->data['cloud_service_name']);
         $vmdId = ResItemVmd::single()->getIdByNameAndCsId($this->data['cloud_service_name'], $csId);
@@ -341,12 +341,12 @@ class CreateVirtualMachine extends Base
             'os_media_link'   => sprintf(
                 self::MEDIA_LINK,
                 $this->extData['sa_name'],
-                $this->data['host_name'] . 'os'
+                $this->data['host_name'] . '-os'
             ),
             'data_media_link' => sprintf(
                 self::MEDIA_LINK,
                 $this->extData['sa_name'],
-                $this->data['host_name'] . 'data'
+                $this->data['host_name'] . '-data'
             ),
             'data_disk_label' => base64_encode($this->subId),
             'data_disk_size'  => $this->data['data_disk_capacity'],

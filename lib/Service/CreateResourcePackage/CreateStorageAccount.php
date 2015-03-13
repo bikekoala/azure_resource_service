@@ -24,6 +24,13 @@ class CreateStorageAccount extends Base
     private $extData;
 
     /**
+     * SA表ID
+     *
+     * @var int
+     */
+    private $saId;
+
+    /**
      * 请求ID
      *
      * @var string
@@ -40,11 +47,13 @@ class CreateStorageAccount extends Base
         if ( ! $this->checkIfNameAvailable()) {
             $this->initExtData();
 
+            $this->saveData();
+
             $this->createSa();
 
             $this->getAzureOperationStatus($this->requestId);
 
-            $this->saveData();
+            $this->updateData();
         }
     }
 
@@ -55,11 +64,21 @@ class CreateStorageAccount extends Base
      */
     private function checkIfNameAvailable()
     {
-        $availabelData = ResItemSa::single()->getAvailableData($this->subId);
+        // 获取一个可用的存储账户记录
+        $availabelData = ResItemSa::single()->getAvailableData($this->data['location'], $this->subId);
+
+        // 检查
         if ( ! empty($availabelData)) {
-            $result = $this->serviceManagement->checkStorageAccountName(
-                $availabelData['name']
-            );
+            // 持续检查记录创建状态，直至状态为成功
+            for ($i=10; $i>0; $i--) {
+                $createStatus = ResItemSa::single()->getCreateStatusById($availabelData['id']);
+                if (ResItemSa::STATUS_CREATING == $createStatus) {
+                    sleep(5);
+                } else break;
+            }
+
+            // 线上检查名称是否存在
+            $result = $this->serviceManagement->checkStorageAccountName($availabelData['name']);
             return 'false' === $result->Result;
         } else return false;
     }
@@ -98,17 +117,33 @@ class CreateStorageAccount extends Base
     /**
      * 保存数据
      *
-     * @return void
+     * @return int
      */
     private function saveData()
     {
-        ResItemSa::single()->addData(
+        $this->saId = ResItemSa::single()->addData(
             $this->itemId,
             $this->subId,
             $this->extData['name'],
             $this->extData['label'],
             $this->extData['location'],
-            $this->requestId
+            0,
+            '',
+            ResItemSa::STATUS_CREATING
+        );
+    }
+
+    /**
+     * 更新请求结果数据
+     *
+     * @return void
+     */
+    private function updateData()
+    {
+        ResItemSa::single()->updateDataById(
+            $this->saId,
+            $this->requestId,
+            ResItemSa::STATUS_CREATED
         );
     }
 

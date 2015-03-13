@@ -84,44 +84,49 @@ class CallbackService extends AbstractService
         // 根据云服务名称获取部署信息
         $res = array();
         foreach ($names as $cloudServiceName => $hostNames) {
-            $deployment = $this->serviceManagement->getDeployment(
-                $cloudServiceName
-            );
+            try {
+                $deployment = $this->serviceManagement->getDeployment(
+                    $cloudServiceName
+                );
+            } catch (\Exception $e) {
+                return array();
+            }
 
             foreach ($hostNames as $hostName) {
-                foreach ($deployment->RoleInstanceList->RoleInstance as $role) {
+                $roleInstance = isset($deployment->RoleInstanceList->RoleInstance->RoleName) ?
+                    array($deployment->RoleInstanceList->RoleInstance) :
+                    $deployment->RoleInstanceList->RoleInstance;
+                foreach ($roleInstance as $role) {
                     if ($hostName != $role->RoleName) continue;
-                    $item = array();
-
-                    $item['cloud_service_name'] = $cloudServiceName;
-                    $item['host_name'] = $role->RoleName;
-                    $item['host_status'] = $role->InstanceStatus;
-                    $item['power_state'] = $role->PowerState;
-
-                    $res[$cloudServiceName][$hostName] = $item;
+                    $res[$cloudServiceName][$hostName] = array(
+                        'cloud_service_name' => $cloudServiceName,
+                        'host_name'          => $role->RoleName,
+                        'host_status'        => $role->InstanceStatus,
+                        'power_state'        => $role->PowerState
+                    );
                 }
 
-                foreach ($deployment->RoleList->Role as $role) {
+                $roles = isset($deployment->RoleList->Role->RoleName) ?
+                    array($deployment->RoleList->Role) :
+                    $deployment->RoleList->Role;
+                foreach ($roles as $role) {
                     if ($hostName != $role->RoleName) continue;
-                    $item = array();
 
+                    $item = array();
                     $cs = $role->ConfigurationSets->ConfigurationSet;
                     if ('NetworkConfiguration' === $cs->ConfigurationSetType) {
                         $ports = array();
                         if (isset($cs->InputEndpoints)) {
-                            $endpoint = $cs->InputEndpoints->InputEndpoint;
-                            if (isset($endpoint->Name)) {
-                                $ports[0]['name'] = $p->Name;
-                                $ports[0]['protocol'] = $p->Protocol;
-                                $ports[0]['port'] = $p->Port;
-                                $ports[0]['local_port'] = $p->LocalPort;
-                            } else {
-                                foreach ($endpoint as $i => $p) {
-                                    $ports[$i]['name'] = $p->Name;
-                                    $ports[$i]['protocol'] = $p->Protocol;
-                                    $ports[$i]['port'] = $p->Port;
-                                    $ports[$i]['local_port'] = $p->LocalPort;
-                                }
+                            $endpoint = isset($cs->InputEndpoints->InputEndpoint->Name) ?
+                                array($cs->InputEndpoints->InputEndpoint) :
+                                $cs->InputEndpoints->InputEndpoint;
+                            foreach ($endpoint as $i => $p) {
+                                $ports[$i] = array(
+                                    'name'       => $p->Name,
+                                    'protocol'   => $p->Protocol,
+                                    'port'       => $p->Port,
+                                    'local_port' => $p->LocalPort
+                                );
                             }
                         }
                         $item['ports'] = $ports;

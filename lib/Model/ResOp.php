@@ -23,6 +23,7 @@ class ResOp extends BaseModel
     /**
      * 操作状态
      */
+    const STATUS_FAIL    = -1;
     const STATUS_ACCEPT  = 0;
     const STATUS_PROCESS = 1;
     const STATUS_SUCCESS = 2;
@@ -72,14 +73,41 @@ class ResOp extends BaseModel
      * @param string $callbackUrl
      * @param string $apiName
      * @param string $apiData
+     * @param int $callbackStatus
+     * @param int $status
+     * @param int $message
      * @return int
      * @throws Exception
      */
-    public function addData($subId, $callbackUrl, $apiName, $apiData)
-    {
+    public function addData(
+        $subId,
+        $callbackUrl,
+        $apiName,
+        $apiData,
+        $callbackStatus,
+        $status,
+        $message = ''
+    ) {
         // prepare
-        $sql = 'INSERT INTO `%s`(`sub_id`, `callback_url`, `api_name`, `api_data`, `create_time`)
-                VALUES (:sub_id, :callback_url, :api_name, :api_data, :create_time)';
+        $sql = 'INSERT INTO `%s`(
+                    `sub_id`,
+                    `callback_url`,
+                    `api_name`,
+                    `api_data`,
+                    `callback_status`,
+                    `status`,
+                    `message`,
+                    `create_time`
+                ) VALUES (
+                    :sub_id,
+                    :callback_url,
+                    :api_name,
+                    :api_data,
+                    :callback_status,
+                    :status,
+                    :message,
+                    :create_time
+                )';
         $sth = $this->pdo->prepare(sprintf($sql, $this->table));
 
         // bindvalue
@@ -87,6 +115,9 @@ class ResOp extends BaseModel
         $sth->bindValue(':callback_url', $callbackUrl, \PDO::PARAM_STR);
         $sth->bindValue(':api_name', $apiName, \PDO::PARAM_STR);
         $sth->bindValue(':api_data', $apiData, \PDO::PARAM_STR);
+        $sth->bindValue(':callback_status', $callbackStatus, \PDO::PARAM_INT);
+        $sth->bindValue(':status', $status, \PDO::PARAM_INT);
+        $sth->bindValue(':message', $message, \PDO::PARAM_STR);
         $sth->bindValue(':create_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
 
         // execute
