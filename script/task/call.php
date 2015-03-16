@@ -8,4 +8,10 @@ $opId = isset($argv[1]) ? $argv[1] : 0;
 if(0 === $opId) {
     exit('Invalid op id.' . PHP_EOL);
 }
-(new Task\Manager($opId))->dispatch();
+
+try {
+    (new Task\Manager($opId))->dispatch();
+} catch (\Exception $e) {
+    echo $msg = $e->getMessage() . PHP_EOL;
+    file_put_contents(DEAMON_LOG_PATH, $msg, FILE_APPEND);
+}

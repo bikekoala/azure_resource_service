@@ -52,6 +52,7 @@ abstract class AbstractService
      *
      * @param int $itemId
      * @return void
+     * @throws Exception
      */
     public function setItemId($itemId)
     {
@@ -71,9 +72,7 @@ abstract class AbstractService
     public function setSubId($subId)
     {
         // validate
-        if (36 !== strlen($subId)) {
-            throw new \Exception('Invalid subscription id !');
-        }
+        Rule\Atom\Guid::validate($subId, '$subId');
         $this->subId = $subId;
 
         // initialization azure management service

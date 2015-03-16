@@ -75,19 +75,21 @@ class CreateVirtualNetwork extends Base
     private function checkIfNameExists()
     {
         $result = $this->serviceManagement->listVirtualNetworkSites();
-        $vns = isset($result->VirtualNetworkSite->Name) ?
-            array($result->VirtualNetworkSite) :
-            $result->VirtualNetworkSite;
+        if ($result) {
+            $vns = isset($result->VirtualNetworkSite->Name) ?
+                array($result->VirtualNetworkSite) :
+                $result->VirtualNetworkSite;
 
-        foreach ($vns as $site) {
-            if ($this->extData['custom']['name'] == $site->Name) {
-                $subnets = isset($site->Subnets->Subnet->Name) ?
-                    array($site->Subnets->Subnet) :
-                    $site->Subnets->Subnet;
-                foreach ($subnets as $subnet) {
-                    foreach ($this->extData['custom']['subnet'] as $sv) {
-                        if ($sv['name'] == $subnet->Name) {
-                            return true;
+            foreach ($vns as $site) {
+                if ($this->extData['custom']['name'] == $site->Name) {
+                    $subnets = isset($site->Subnets->Subnet->Name) ?
+                        array($site->Subnets->Subnet) :
+                        $site->Subnets->Subnet;
+                    foreach ($subnets as $subnet) {
+                        foreach ($this->extData['custom']['subnet'] as $sv) {
+                            if ($sv['name'] == $subnet->Name) {
+                                return true;
+                            }
                         }
                     }
                 }
@@ -173,12 +175,6 @@ class CreateVirtualNetwork extends Base
      */
     private function initExtData()
     {
-        // get datas from database
-        $vns = ResItemVn::single()->getDatasBySubId($this->subId);
-        foreach ($vns as &$v) {
-            $v['subnet'] = ResItemVnSubnet::single()->getDatasByVnId($v['id']);
-        }
-
         // custom data
         $custom = array(
             'name'           => self::getName($this->data['location']),
@@ -191,6 +187,13 @@ class CreateVirtualNetwork extends Base
                 )
             )
         );
+
+        // get datas from database
+        $vns = ResItemVn::single()->getDatasBySubId($this->subId);
+        foreach ($vns as &$v) {
+            $v['subnet'] = ResItemVnSubnet::single()->getDatasByVnId($v['id']);
+        }
+        $vns[] = $custom;
 
         $this->extData = compact('vns', 'custom');
     }

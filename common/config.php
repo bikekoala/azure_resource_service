@@ -8,6 +8,7 @@ define('ADDONS_PATH', APP_PATH . '/addons/');
 define('SCRIPT_PATH', APP_PATH . '/script/');
 define('AZURE_SDK_PATH', ADDONS_PATH . '/azure_sdk/');
 define('AZURE_PEM_PATH', '/tmp/');
+define('DEAMON_LOG_PATH', '/tmp/azure.log');
 
 /**
  * 项目自定义配置

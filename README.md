@@ -19,5 +19,5 @@ This project provides resources operations based on Azure SDK.
 2.  Start the deamon script
 ``` bash
     cd script/task
-    /bin/php fire.php >> record.log &
+    /bin/php fire.php &
 ```

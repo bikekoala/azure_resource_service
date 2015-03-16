@@ -28,7 +28,7 @@ abstract class RuleAbstract
     {
         $status = filter_var($param, static::$filterId, static::$filterOptions);
         if (false === $status) {
-            self::throws($fieldName, $errorMessage);
+            self::throws($fieldName, $errorMessage ? : static::$errorMessage);
         }
     }
 
