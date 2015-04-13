@@ -21,6 +21,12 @@ class ResItemCs extends BaseModel
     public static $instance;
 
     /**
+     * 删除状态常量
+     */
+    const STATUS_DELETE_TRUE  = 1;
+    const STATUS_DELETE_FALSE = 0;
+
+    /**
      * 通过云服务名称获取表ID
      *
      * @param string $name
@@ -29,9 +35,10 @@ class ResItemCs extends BaseModel
     public function getIdByName($name)
     {
         $sql = sprintf(
-            'SELECT `id` FROM `%s` WHERE `name`="%s"',
+            'SELECT `id` FROM `%s` WHERE `name`="%s" AND `is_deleted`=%d',
             $this->table,
-            $name
+            $name,
+            self::STATUS_DELETE_FALSE
         );
         $sth = $this->pdo->prepare($sql);
         $sth->execute();
@@ -47,9 +54,10 @@ class ResItemCs extends BaseModel
     public function getDataByName($name)
     {
         $sql = sprintf(
-            'SELECT * FROM `%s` WHERE `name`="%s"',
+            'SELECT * FROM `%s` WHERE `name`="%s" AND `is_deleted`=%d',
             $this->table,
-            $name
+            $name,
+            self::STATUS_DELETE_FALSE
         );
         $sth = $this->pdo->prepare($sql);
         $sth->setFetchMode(\PDO::FETCH_ASSOC); 
@@ -84,6 +92,7 @@ class ResItemCs extends BaseModel
                     `label`,
                     `location`,
                     `request_id`,
+                    `is_deleted`,
                     `create_time`
                 )
                 VALUES (
@@ -92,6 +101,7 @@ class ResItemCs extends BaseModel
                     :label,
                     :location,
                     :request_id,
+                    :is_deleted,
                     :create_time
                 )';
         $sth = $this->pdo->prepare(sprintf($sql, $this->table));
@@ -102,7 +112,37 @@ class ResItemCs extends BaseModel
         $sth->bindValue(':label', $label, \PDO::PARAM_STR);
         $sth->bindValue(':location', $location, \PDO::PARAM_STR);
         $sth->bindValue(':request_id', $requestId, \PDO::PARAM_STR);
+        $sth->bindValue(':is_deleted', self::STATUS_DELETE_FALSE, \PDO::PARAM_INT);
         $sth->bindValue(':create_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
+
+        // execute
+        try {
+            return $sth->execute();
+        } catch (\PDOException $e) {
+            throw new \Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * 通过ID更新删除状态
+     *
+     * @param int $id
+     * @param int $status
+     * @return void
+     */
+    public function updateDeleteStatusById($id, $status)
+    {
+        // prepare
+        $sql = 'UPDATE `%s`
+                SET `is_deleted`=:is_deleted,
+                    `update_time`=:update_time
+                WHERE `id`=%d';
+        $sql = sprintf($sql, $this->table, $id);
+        $sth = $this->pdo->prepare($sql);
+
+        // bindvalue
+        $sth->bindValue(':is_deleted', $status, \PDO::PARAM_INT);
+        $sth->bindValue(':update_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
 
         // execute
         try {

@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 5.5.39, for Linux (x86_64)
 --
--- Host: localhost    Database: ucw_cmdb
+-- Host: localhost    Database: ucw_cmdb_dev
 -- ------------------------------------------------------
 -- Server version	5.5.39-cll-lve
 
@@ -52,7 +52,9 @@ CREATE TABLE `azure_res_item_cs` (
   `label` varchar(100) NOT NULL COMMENT '云服务base64编码的标识符',
   `location` varchar(50) NOT NULL COMMENT '创建云服务的位置',
   `request_id` char(32) DEFAULT NULL COMMENT '响应ID',
+  `is_deleted` tinyint(1) unsigned NOT NULL COMMENT '是否已删除',
   `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`) USING BTREE,
   KEY `item_id` (`item_id`) USING BTREE,
@@ -129,32 +131,13 @@ CREATE TABLE `azure_res_item_vmd_role` (
   `user_name` varchar(255) NOT NULL COMMENT '用户名',
   `user_password` varchar(123) NOT NULL COMMENT '用户密码',
   `request_id` char(32) DEFAULT NULL COMMENT '请求ID',
+  `is_deleted` tinyint(1) unsigned NOT NULL COMMENT '是否已删除',
   `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `vmd_id_host_name` (`vmd_id`,`host_name`) USING BTREE,
   KEY `request_id` (`request_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部署角色表';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `azure_res_item_vmd_role_port`
---
-
-DROP TABLE IF EXISTS `azure_res_item_vmd_role_port`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `azure_res_item_vmd_role_port` (
-  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT '编号',
-  `role_id` int(11) unsigned NOT NULL COMMENT '角色表ID',
-  `name` varchar(255) NOT NULL COMMENT '端口名称',
-  `protocol` char(3) NOT NULL COMMENT '端口协议',
-  `port` int(11) unsigned DEFAULT NULL COMMENT '外部端口号',
-  `local_port` int(11) unsigned NOT NULL COMMENT '本地端口号',
-  `create_time` datetime NOT NULL COMMENT '创建时间',
-  PRIMARY KEY (`id`),
-  KEY `name` (`name`),
-  KEY `role_id` (`role_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Azure资源条目虚拟机部署角色端口表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -172,6 +155,7 @@ CREATE TABLE `azure_res_item_vn` (
   `location` varchar(50) NOT NULL COMMENT '虚拟网络地域',
   `address_prefix` varchar(18) NOT NULL COMMENT '虚拟网络地址前缀',
   `request_id` char(32) DEFAULT NULL COMMENT '请求ID',
+  `is_created` tinyint(1) unsigned NOT NULL DEFAULT '0' COMMENT '是否创建',
   `create_time` datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`),
   UNIQUE KEY `sub_id_name` (`sub_id`,`name`) USING BTREE,
@@ -309,4 +293,4 @@ CREATE TABLE `azure_subscription` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-03-12 16:39:17
+-- Dump completed on 2015-04-11 11:24:50

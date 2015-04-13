@@ -9,9 +9,4 @@ if(0 === $opId) {
     exit('Invalid op id.' . PHP_EOL);
 }
 
-try {
-    (new Task\Manager($opId))->dispatch();
-} catch (\Exception $e) {
-    echo $msg = $e->getMessage() . PHP_EOL;
-    file_put_contents(DEAMON_LOG_PATH, $msg, FILE_APPEND);
-}
+(new Task\Manager($opId))->dispatch();

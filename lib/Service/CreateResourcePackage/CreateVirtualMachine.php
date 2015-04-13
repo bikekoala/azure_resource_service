@@ -9,7 +9,6 @@ use Model\ResItemVn;
 use Model\ResItemCs;
 use Model\ResItemVmd;
 use Model\ResItemVmdRole;
-use Model\ResItemVmdRolePort;
 use Service\CreateResourcePackage\CreateVirtualNetwork;
 use WindowsAzure\ServiceManagement\Models\AddRoleOptions;
 use WindowsAzure\ServiceManagement\Models\CreateDeploymentByRolesOptions;
@@ -230,9 +229,9 @@ class CreateVirtualMachine extends Base
 
             // 保存角色或部署角色数据
             if ($hasDeployment) {
-                $this->saveRoleDatas();
+                $this->saveRoleData();
             } else {
-                $this->saveRoleDatasByDeployment();
+                $this->saveRoleDataByDeployment();
             }
             // 将存储账户磁盘数加2（系统盘与数据盘）
             ResItemSa::single()->updateDiskCount($this->extData['sa_id'], 2);
@@ -250,10 +249,10 @@ class CreateVirtualMachine extends Base
      * @param int $vmdId
      * @return void
      */
-    private function saveRoleDatas($vmdId = 0)
+    private function saveRoleData($vmdId = 0)
     {
         $vmdId = $vmdId ? : $this->extData['vmd_id'];
-        $roleId = ResItemVmdRole::single()->addData(
+        ResItemVmdRole::single()->addData(
             $vmdId,
             $this->data['size_id'],
             $this->data['image_id'],
@@ -267,16 +266,6 @@ class CreateVirtualMachine extends Base
             $this->roleData['user_password'],
             $this->requestId
         );
-
-        foreach ($this->roleData['ports'] as $item) {
-            ResItemVmdRolePort::single()->addData(
-                $roleId,
-                $item['name'],
-                $item['protocol'],
-                isset($item['port']) ? $item['port'] : null,
-                $item['local_port']
-            );
-        }
     }
 
     /**
@@ -284,7 +273,7 @@ class CreateVirtualMachine extends Base
      *
      * @return void
      */
-    private function saveRoleDatasByDeployment()
+    private function saveRoleDataByDeployment()
     {
         $vmdId = ResItemVmd::single()->addData(
             $this->itemId,
@@ -295,7 +284,7 @@ class CreateVirtualMachine extends Base
             $this->extData['vmd_label']
         );
 
-        $this->saveRoleDatas($vmdId);
+        $this->saveRoleData($vmdId);
     }
 
     /**

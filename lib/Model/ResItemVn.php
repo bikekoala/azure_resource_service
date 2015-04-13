@@ -21,6 +21,12 @@ class ResItemVn extends BaseModel
     public static $instance;
 
     /**
+     * 是否已创建
+     */
+    const STATUS_CREATED  = 1;
+    const STATUS_CREATING = 0;
+
+    /**
      * 通过订阅ID获取多条数据
      *
      * @param string $subId
@@ -85,6 +91,52 @@ class ResItemVn extends BaseModel
     }
 
     /**
+     * 通过ID获取创建状态
+     *
+     * @param int $id
+     * @return int
+     */
+    public function getCreateStatusById($id)
+    {
+        $sql = sprintf(
+            'SELECT `is_created` FROM `%s` WHERE `id`="%d"',
+            $this->table,
+            $id
+        );
+        $sth = $this->pdo->prepare($sql);
+        $sth->execute();
+        return (int) $sth->fetchColumn();
+    }
+
+    /**
+     * 更新数据
+     *
+     * @param int $id
+     * @param string $requestId
+     * @param int $isCreated
+     * @return mixed
+     */
+    public function updateDataById($id, $requestId, $isCreated)
+    {
+        // prepare
+        $sql = 'UPDATE `%s`
+                SET `request_id`=:request_id, `is_created`=:is_created
+                WHERE `id`=%d';
+        $sth = $this->pdo->prepare(sprintf($sql, $this->table, $id));
+
+        // bindvalue
+        $sth->bindValue(':request_id', $requestId, \PDO::PARAM_STR);
+        $sth->bindValue(':is_created', $isCreated, \PDO::PARAM_INT);
+
+        // execute
+        try {
+            return $sth->execute();
+        } catch (\PDOException $e) {
+            throw new \Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
      * 插入单条数据
      *
      * @param int $itemId
@@ -93,6 +145,7 @@ class ResItemVn extends BaseModel
      * @param string $location
      * @param string $addressPrefix
      * @param string $requestId
+     * @param int $isCreated
      * @return int
      * @throws Exception
      */
@@ -102,7 +155,8 @@ class ResItemVn extends BaseModel
         $name,
         $location,
         $addressPrefix,
-        $requestId
+        $requestId,
+        $isCreated
     ) {
         // prepare
         $sql = 'INSERT INTO `%s`(
@@ -112,6 +166,7 @@ class ResItemVn extends BaseModel
                     `location`,
                     `address_prefix`,
                     `request_id`,
+                    `is_created`,
                     `create_time`
                 )
                 VALUES (
@@ -121,6 +176,7 @@ class ResItemVn extends BaseModel
                     :location,
                     :address_prefix,
                     :request_id,
+                    :is_created,
                     :create_time
                 )';
         $sth = $this->pdo->prepare(sprintf($sql, $this->table));
@@ -132,6 +188,7 @@ class ResItemVn extends BaseModel
         $sth->bindValue(':location', $location, \PDO::PARAM_STR);
         $sth->bindValue(':address_prefix', $addressPrefix, \PDO::PARAM_STR);
         $sth->bindValue(':request_id', $requestId, \PDO::PARAM_STR);
+        $sth->bindValue(':is_created', $isCreated, \PDO::PARAM_INT);
         $sth->bindValue(':create_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
 
         // execute

@@ -84,11 +84,17 @@ class Manager
      */
     private function callback()
     {
-        // send callback request
+        // collect callback data
         $serviceName = $this->getServiceName('Callback');
+        $service = new $serviceName;
+        $service->setSubId(ResOp::single()->getSubId($this->opId));
+        $service->setItems(ResItem::single()->getDatasByOpId($this->opId));
+        $data = $callbackService->run();
+
+        // send callback request
         $status = callback_url($this->opData['callback_url'], array(
             'id'    => $this->opId,
-            'items' => (new $serviceName($this->opId))->run()
+            'items' => $data
         ));
 
         // save callback status

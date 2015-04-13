@@ -14,11 +14,17 @@ class ResItemVmdRole extends BaseModel
      * @var string
      */
     protected $table = 'azure_res_item_vmd_role';
-
+ 
     /**
      * 实例对象
      */
     public static $instance;
+
+    /**
+     * 删除状态常量
+     */
+    const STATUS_DELETE_TRUE  = 1;
+    const STATUS_DELETE_FALSE = 0;
 
     /**
      * 通过订阅ID获取多条数据
@@ -30,10 +36,11 @@ class ResItemVmdRole extends BaseModel
     public function getDataByHostNameAndVmdId($hostName, $vmdId)
     {
         $sql = sprintf(
-            'SELECT * FROM `%s` WHERE `host_name`="%s" AND `vmd_id`=%d',
+            'SELECT * FROM `%s` WHERE `host_name`="%s" AND `vmd_id`=%d AND `is_deleted`=%d',
             $this->table,
             $hostName,
-            $vmdId
+            $vmdId,
+            self::STATUS_DELETE_FALSE
         );
         $sth = $this->pdo->prepare($sql);
         $sth->setFetchMode(\PDO::FETCH_ASSOC); 
@@ -87,6 +94,7 @@ class ResItemVmdRole extends BaseModel
                     `host_name`,
                     `user_name`,
                     `user_password`,
+                    `is_deleted`,
                     `request_id`,
                     `create_time`
                 )
@@ -102,6 +110,7 @@ class ResItemVmdRole extends BaseModel
                     :host_name,
                     :user_name,
                     :user_password,
+                    :is_deleted,
                     :request_id,
                     :create_time
                 )';
@@ -119,6 +128,7 @@ class ResItemVmdRole extends BaseModel
         $sth->bindValue(':host_name', $hostName, \PDO::PARAM_STR);
         $sth->bindValue(':user_name', $userName, \PDO::PARAM_STR);
         $sth->bindValue(':user_password', $userPassword, \PDO::PARAM_STR);
+        $sth->bindValue(':is_deleted', self::STATUS_DELETE_FALSE, \PDO::PARAM_INT);
         $sth->bindValue(':request_id', $requestId, \PDO::PARAM_STR);
         $sth->bindValue(':create_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
 
@@ -126,6 +136,35 @@ class ResItemVmdRole extends BaseModel
         try {
             $sth->execute();
             return (int) $this->pdo->lastInsertId();
+        } catch (\PDOException $e) {
+            throw new \Exception($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * 通过ID更新删除状态
+     *
+     * @param int $id
+     * @param int $status
+     * @return void
+     */
+    public function updateDeleteStatusById($id, $status)
+    {
+        // prepare
+        $sql = 'UPDATE `%s`
+                SET `is_deleted`=:is_deleted,
+                    `update_time`=:update_time
+                WHERE `id`=%d';
+        $sql = sprintf($sql, $this->table, $id);
+        $sth = $this->pdo->prepare($sql);
+
+        // bindvalue
+        $sth->bindValue(':is_deleted', $status, \PDO::PARAM_INT);
+        $sth->bindValue(':update_time', date('Y-m-d H:i:s'), \PDO::PARAM_STR);
+
+        // execute
+        try {
+            return $sth->execute();
         } catch (\PDOException $e) {
             throw new \Exception($e->getMessage(), 500);
         }

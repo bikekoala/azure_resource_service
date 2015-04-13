@@ -43,6 +43,13 @@ class CreateVirtualNetwork extends Base
     private $extData;
 
     /**
+     * VN表ID
+     *
+     * @var int
+     */
+    private $vnId;
+
+    /**
      * 请求ID
      *
      * @var string
@@ -59,12 +66,14 @@ class CreateVirtualNetwork extends Base
         $this->initExtData();
 
         if ( ! $this->checkIfNameExists()) {
+            $this->saveData();
+
             $this->createVn();
 
             $this->getAzureOperationStatus($this->requestId);
-        }
 
-        $this->saveDatas();
+            $this->updateData();
+        }
     }
 
     /**
@@ -74,28 +83,46 @@ class CreateVirtualNetwork extends Base
      */
     private function checkIfNameExists()
     {
-        $result = $this->serviceManagement->listVirtualNetworkSites();
-        if ($result) {
-            $vns = isset($result->VirtualNetworkSite->Name) ?
-                array($result->VirtualNetworkSite) :
-                $result->VirtualNetworkSite;
+        // 查询本地记录
+        $data = ResItemVn::single()->getDataByNameAndSubId(
+            $this->extData['name'],
+            $this->subId
+        );
 
-            foreach ($vns as $site) {
-                if ($this->extData['custom']['name'] == $site->Name) {
-                    $subnets = isset($site->Subnets->Subnet->Name) ?
-                        array($site->Subnets->Subnet) :
-                        $site->Subnets->Subnet;
-                    foreach ($subnets as $subnet) {
-                        foreach ($this->extData['custom']['subnet'] as $sv) {
-                            if ($sv['name'] == $subnet->Name) {
-                                return true;
+        // 检查
+        if ( ! empty($data)) {
+            // 持续检查记录创建状态，直至状态为成功
+            for ($i=10; $i>0; $i--) {
+                $createStatus = ResItemVn::single()->getCreateStatusById($data['id']);
+                if (ResItemVn::STATUS_CREATING == $createStatus) {
+                    sleep(10);
+                } else break;
+            }
+
+            // 线上检查名称是否存在
+            $result = $this->serviceManagement->listVirtualNetworkSites();
+            if ($result) {
+                $vns = isset($result->VirtualNetworkSite->Name) ?
+                    array($result->VirtualNetworkSite) :
+                    $result->VirtualNetworkSite;
+
+                foreach ($vns as $site) {
+                    if ($this->extData['name'] == $site->Name) {
+                        $subnets = isset($site->Subnets->Subnet->Name) ?
+                            array($site->Subnets->Subnet) :
+                            $site->Subnets->Subnet;
+                        foreach ($subnets as $subnet) {
+                            foreach ($this->extData['subnet'] as $sv) {
+                                if ($sv['name'] == $subnet->Name) {
+                                    return true;
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-        return false;
+            return false;
+        } else return false;
     }
 
     /**
@@ -105,19 +132,26 @@ class CreateVirtualNetwork extends Base
      */
     private function createVn()
     {
+        // get datas from database
+        $vns = ResItemVn::single()->getDatasBySubId($this->subId);
+        foreach ($vns as &$v) {
+            $v['subnet'] = ResItemVnSubnet::single()->getDatasByVnId($v['id']);
+        }
+
+        // call azure service
         $vnsOptions = array();
-        foreach ($this->extData['vns'] as $v) {
+        foreach ($vns as $i) {
             $subnetOptions = array();
-            foreach ($v['subnet'] as $s) {
+            foreach ($i['subnet'] as $s) {
                 $subnetOptions[$s['name']] = new SetNetworkConfigurationOptions();
                 $subnetOptions[$s['name']]->setVnsSubnetName($s['name']);
                 $subnetOptions[$s['name']]->setVnsSubnetAddressPrefix($s['address_prefix']);
             }
-            $vnsOptions[$v['name']] = new SetNetworkConfigurationOptions();
-            $vnsOptions[$v['name']]->setVnsName($v['name']);
-            $vnsOptions[$v['name']]->setVnsLocation($v['location']);
-            $vnsOptions[$v['name']]->setVnsAdressSpaceAddressPrefix($v['address_prefix']);
-            $vnsOptions[$v['name']]->setVnsSubnetList($subnetOptions);
+            $vnsOptions[$i['name']] = new SetNetworkConfigurationOptions();
+            $vnsOptions[$i['name']]->setVnsName($i['name']);
+            $vnsOptions[$i['name']]->setVnsLocation($i['location']);
+            $vnsOptions[$i['name']]->setVnsAdressSpaceAddressPrefix($i['address_prefix']);
+            $vnsOptions[$i['name']]->setVnsSubnetList($subnetOptions);
         }
         $result = $this->callAzureService('setNetworkConfiguration', $vnsOptions);
         $this->requestId = $result['x-ms-request-id'];
@@ -126,34 +160,26 @@ class CreateVirtualNetwork extends Base
     /**
      * 保存数据
      *
-     * @return void
+     * @return int
      */
-    private function saveDatas()
+    private function saveData()
     {
-        // check if exists
-        $customData = $this->extData['custom'];
-        $data = ResItemVn::single()->getDataByNameAndSubId(
-            $customData['name'],
-            $this->subId
-        );
-        if ( ! empty($data)) return;
-
-        // save datas
         try {
             $pdo = BaseModel::single()->pdo;
             $pdo->beginTransaction();
 
-            $id = ResItemVn::single()->addData(
+            $this->vnId = ResItemVn::single()->addData(
                 $this->itemId,
                 $this->subId,
-                $customData['name'],
-                $customData['location'],
-                $customData['address_prefix'],
-                $this->requestId
+                $this->extData['name'],
+                $this->extData['location'],
+                $this->extData['address_prefix'],
+                '',
+                ResItemVn::STATUS_CREATING
             );
-            foreach ($customData['subnet'] as $subnet) {
+            foreach ($this->extData['subnet'] as $subnet) {
                 ResItemVnSubnet::single()->addData(
-                    $id,
+                    $this->vnId,
                     $subnet['name'],
                     $subnet['address_prefix']
                 );
@@ -164,8 +190,20 @@ class CreateVirtualNetwork extends Base
             $pdo->rollBack();
             throw new \Exception($e->getMessage());
         }
+    }
 
-        
+    /**
+     * 更新请求结果数据
+     *
+     * @return void
+     */
+    private function updateData()
+    {
+        ResItemVn::single()->updateDataById(
+            $this->vnId,
+            $this->requestId,
+            ResItemVn::STATUS_CREATED
+        );
     }
 
     /**
@@ -175,8 +213,7 @@ class CreateVirtualNetwork extends Base
      */
     private function initExtData()
     {
-        // custom data
-        $custom = array(
+        $data = array(
             'name'           => self::getName($this->data['location']),
             'location'       => $this->data['location'],
             'address_prefix' => self::ADDRESS_PREFIX,
@@ -187,15 +224,7 @@ class CreateVirtualNetwork extends Base
                 )
             )
         );
-
-        // get datas from database
-        $vns = ResItemVn::single()->getDatasBySubId($this->subId);
-        foreach ($vns as &$v) {
-            $v['subnet'] = ResItemVnSubnet::single()->getDatasByVnId($v['id']);
-        }
-        $vns[] = $custom;
-
-        $this->extData = compact('vns', 'custom');
+        $this->extData = $data;
     }
 
     /**

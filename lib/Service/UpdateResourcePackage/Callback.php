@@ -1,12 +1,12 @@
 <?PHP    
-namespace Service\QueryResourcePackage;
+namespace Service\UpdateResourcePackage;
 
 use Service\CallbackService;
 
 /**
- * 调用服务
+ * 回调服务
  *
- * @author Xuewu Sun <sunxw@ucloudworld.com> 2015-02-06
+ * @author Xuewu Sun <sunxw@ucloudworld.com> 2015-04-11
  */
 class Callback extends CallbackService
 {
@@ -21,12 +21,11 @@ class Callback extends CallbackService
         $vmRes = $this->getAzureResourceForVm();
         if ( ! empty($vmRes)) {
             foreach ($this->items as $i => $item) {
-                $vm = $vmRes[$item['data']['cloud_service_name']][$item['data']['host_name']];
-                $params[$i]['host_status'] = $vm['host_status'];
-                $params[$i]['power_state'] = $vm['power_state'];
+                $d = $vmRes[$item['data']['cloud_service_name']][$item['data']['host_name']];
+                $params[$i]['internal_ip'] = $d['internal_ip'];
+                $params[$i]['ports'] = $d['ports'];
             }
         }
-        
         return $params;
     }
 }

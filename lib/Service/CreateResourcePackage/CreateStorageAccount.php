@@ -73,7 +73,7 @@ class CreateStorageAccount extends Base
             for ($i=10; $i>0; $i--) {
                 $createStatus = ResItemSa::single()->getCreateStatusById($availabelData['id']);
                 if (ResItemSa::STATUS_CREATING == $createStatus) {
-                    sleep(5);
+                    sleep(10);
                 } else break;
             }
 

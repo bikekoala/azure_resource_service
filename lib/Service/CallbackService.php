@@ -1,12 +1,11 @@
 <?PHP    
 namespace Service;
 
-use Model\ResOp;
 use Model\ResItem;
 use Service\AbstractService;
 
 /**
- * 调用服务
+ * 基础回调服务
  *
  * @author Xuewu Sun <sunxw@ucloudworld.com> 2015-02-06
  */
@@ -20,24 +19,6 @@ class CallbackService extends AbstractService
     protected $items;
 
     /**
-     * 构造方法
-     *
-     * @param int $opId
-     * @return void
-     */
-    public function __construct($opId)
-    {
-        // set items
-        $this->items = ResItem::single()->getDatasByOpId($opId);
-        foreach ($this->items as &$item) {
-            $item['data'] = unserialize($item['data']);
-        }
-
-        // set sub id
-        $this->setSubId(ResOp::single()->getSubId($opId));
-    }
-
-    /**
      * 执行
      *
      * @return void
@@ -47,11 +28,25 @@ class CallbackService extends AbstractService
     }
 
     /**
+     * 设置操作条目数据
+     *
+     * @param array $items
+     * @return void
+     */
+    public function setItems($items)
+    {
+        foreach ($items as &$item) {
+            $item['data'] = unserialize($item['data']);
+        }
+        $this->items = $items;
+    }
+
+    /**
      * 获取通用的回调参数
      *
      * @return array
      */
-    public function getCommonParams()
+    protected function getCommonParams()
     {
         $params = array();
         foreach ($this->items as $i => $item) {
@@ -72,87 +67,8 @@ class CallbackService extends AbstractService
      *
      * @return array
      */
-    public function getAzureResourceForVm()
+    protected function getAzureResourceForVm()
     {
-        // 统计云服务名称与主机名称的对应关系
-        $names = array();
-        foreach ($this->items as $item) {
-            $names[$item['data']['cloud_service_name']][] =
-                $item['data']['host_name'];
-        }
-
-        // 根据云服务名称获取部署信息
-        $res = array();
-        foreach ($names as $cloudServiceName => $hostNames) {
-            try {
-                $deployment = $this->serviceManagement->getDeployment(
-                    $cloudServiceName
-                );
-            } catch (\Exception $e) {
-                return array();
-            }
-
-            foreach ($hostNames as $hostName) {
-                $roleInstance = isset($deployment->RoleInstanceList->RoleInstance->RoleName) ?
-                    array($deployment->RoleInstanceList->RoleInstance) :
-                    $deployment->RoleInstanceList->RoleInstance;
-                foreach ($roleInstance as $role) {
-                    if ($hostName != $role->RoleName) continue;
-                    $res[$cloudServiceName][$hostName] = array(
-                        'cloud_service_name' => $cloudServiceName,
-                        'host_name'          => $role->RoleName,
-                        'host_status'        => $role->InstanceStatus,
-                        'power_state'        => $role->PowerState
-                    );
-                }
-
-                $roles = isset($deployment->RoleList->Role->RoleName) ?
-                    array($deployment->RoleList->Role) :
-                    $deployment->RoleList->Role;
-                foreach ($roles as $role) {
-                    if ($hostName != $role->RoleName) continue;
-
-                    $item = array();
-                    $cs = $role->ConfigurationSets->ConfigurationSet;
-                    if ('NetworkConfiguration' === $cs->ConfigurationSetType) {
-                        $ports = array();
-                        if (isset($cs->InputEndpoints)) {
-                            $endpoint = isset($cs->InputEndpoints->InputEndpoint->Name) ?
-                                array($cs->InputEndpoints->InputEndpoint) :
-                                $cs->InputEndpoints->InputEndpoint;
-                            foreach ($endpoint as $i => $p) {
-                                $ports[$i] = array(
-                                    'name'       => $p->Name,
-                                    'protocol'   => $p->Protocol,
-                                    'port'       => $p->Port,
-                                    'local_port' => $p->LocalPort
-                                );
-                            }
-                        }
-                        $item['ports'] = $ports;
-                    }
-                    $item['internal_ip'] = $cs->StaticVirtualNetworkIPAddress;
-
-                    $dataDisk = $role->DataVirtualHardDisks->DataVirtualHardDisk;
-                    $item['data_disk_name'] = $dataDisk->DiskName;
-                    $item['data_disk_capacity'] = $dataDisk->LogicalDiskSizeInGB;
-                    $item['data_disk_media_link'] = $dataDisk->MediaLink;
-
-                    $osDisk = $role->OSVirtualHardDisk;
-                    $item['os_disk_name'] = $osDisk->DiskName;
-                    $item['os_disk_media_link'] = $osDisk->MediaLink;
-                    $item['os_name'] = $osDisk->OS;
-                    $item['os_source_image_name'] = $osDisk->SourceImageName;
-
-                    $item['size_name'] = $role->RoleSize;
-
-                    $res[$cloudServiceName][$role->RoleName] = array_merge(
-                        $res[$cloudServiceName][$hostName],
-                        $item
-                    );
-                }
-            }
-        }
-        return $res;
+        return $this->getAzureVmResource(array_column($this->items, 'data'));
     }
 }

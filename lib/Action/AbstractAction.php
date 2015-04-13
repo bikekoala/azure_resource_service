@@ -89,21 +89,21 @@ abstract class AbstractAction
     /**
      * 检查共同参数
      *
+     * @param bool $isAsync
      * @return void
      * @throws Exception
      */
-    public function checkCommonParams()
+    public function checkCommonParams($isAsync = true)
     {
-        \Rule\Field\SubscriptionId::validate(
-            $this->data['subscription_id'],
-            'subscription_id'
-        );
-        \Rule\Atom\Url::validate($this->data['callback_url'], 'callback_url');
+        \Rule\Field\SubscriptionId::validate($this->data['subscription_id'], 'subscription_id');
         \Rule\Atom\Arr::validate($this->data['resources'], 'resources');
+        $this->subId     = $this->data['subscription_id'];
+        $this->resources = $this->data['resources'];
 
-        $this->subId       = $this->data['subscription_id'];
-        $this->callbackUrl = $this->data['callback_url'];
-        $this->resources   = $this->data['resources'];
+        if ($isAsync) {
+            \Rule\Atom\Url::validate($this->data['callback_url'], 'callback_url');
+            $this->callbackUrl = $this->data['callback_url'];
+        }
     }
 
     /**

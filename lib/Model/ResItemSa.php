@@ -4,9 +4,6 @@ namespace Model;
 /**
  * Azure资源条目存储账户模型
  *
- * todo:
- *  删除虚拟机时需要递减disk_count
- *
  * @author Xuewu Sun <sunxw@ucloudworld.com> 2015-01-26
  */
 class ResItemSa extends BaseModel
@@ -97,13 +94,13 @@ class ResItemSa extends BaseModel
      * 更新磁盘数
      *
      * @param int $id
-     * @param int $count
+     * @param int $count 支持正数和负数
      * @return void
      */
     public function updateDiskCount($id, $count)
     {
         $sql = sprintf(
-            'UPDATE `%s` SET `disk_count`=`disk_count`+%d WHERE `id`=%d',
+            'UPDATE `%s` SET `disk_count`=`disk_count`+(%d) WHERE `id`=%d',
             $this->table,
             $count,
             $id
